@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
           fetch-depth: 0
@@ -79,7 +79,7 @@ jobs:
 
       - name: Cache Flutter-ohos SDK
         id: flutter-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/flutter-ohos
@@ -162,7 +162,7 @@ jobs:
           flutter build hap "--$BUILD_MODE" --no-codesign
 
       - name: Upload HAP
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: serverbox-ohos-${{ env.BUILD_MODE }}
           path: build/ohos/hap/*.hap
