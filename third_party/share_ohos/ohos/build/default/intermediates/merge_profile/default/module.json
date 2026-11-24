@@ -1,0 +1,26 @@
+{
+	"app": {
+		"bundleName": "com.rzdpai.shell",
+		"debug": false,
+		"versionCode": 1816,
+		"versionName": "1.0.1816",
+		"minAPIVersion": 50100018,
+		"targetAPIVersion": 50100018,
+		"apiReleaseType": "Release",
+		"compileSdkVersion": "5.1.0.125",
+		"compileSdkType": "HarmonyOS",
+		"appEnvironments": [],
+		"bundleType": "app",
+		"buildMode": "release"
+	},
+	"module": {
+		"name": "share_ohos",
+		"type": "har",
+		"deviceTypes": [
+			"default",
+			"tablet"
+		],
+		"packageName": "share_ohos",
+		"installationFree": false
+	}
+}

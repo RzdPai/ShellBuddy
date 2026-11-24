@@ -1,0 +1,12 @@
+name: cupertino_ui
+description: >-
+  Re-exports the Cupertino widgets from the Flutter framework itself.
+version: 1.1.1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter

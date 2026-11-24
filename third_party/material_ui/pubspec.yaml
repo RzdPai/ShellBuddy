@@ -1,0 +1,14 @@
+name: material_ui
+description: >-
+  Re-exports the Material widgets from the Flutter framework itself.
+version: 1.5.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter

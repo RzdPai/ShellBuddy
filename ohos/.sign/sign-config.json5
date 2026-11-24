@@ -1,0 +1,19 @@
+{
+  "signingConfigs": [
+    {
+      "name": "default",
+      "type": "HarmonyOS",
+      "material": {
+        "storeFile": "",
+        "storePassword": "",
+        "keyAlias": "",
+        "keyPassword": "",
+        "signAlg": "SHA256withECDSA",
+        "profile": "",
+        "certpath": "",
+        "issuer": "",
+        "validity": ""
+      }
+    }
+  ]
+}

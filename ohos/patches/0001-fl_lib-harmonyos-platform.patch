@@ -1,0 +1,68 @@
+diff --git a/lib/src/core/utils/platform/arch.dart b/lib/src/core/utils/platform/arch.dart
+index 9f6049f..311e6a8 100644
+--- a/lib/src/core/utils/platform/arch.dart
++++ b/lib/src/core/utils/platform/arch.dart
+@@ -65,6 +65,17 @@ enum CpuArch {
+         return _fromUname();
+       case Pfs.linux || Pfs.android || Pfs.fuchsia:
+         return _fromUname();
++      case Pfs.ohos:
++        // Devices are arm64 and the emulator can be x64, so `uname` is asked
++        // first. It falls back rather than throwing: HarmonyOS runs the app
++        // in a sandbox that may refuse to spawn a process at all, and a wrong
++        // guess about the CPU costs one download the user can pick again —
++        // an exception here costs the launch.
++        try {
++          return _fromUname();
++        } catch (_) {
++          return CpuArch.arm64;
++        }
+       case Pfs.web || Pfs.unknown:
+         throw UnsupportedError('Unsupported platform: ${Pfs.type}');
+     }
+diff --git a/lib/src/core/utils/platform/base.dart b/lib/src/core/utils/platform/base.dart
+index cf59a31..d152fa3 100644
+--- a/lib/src/core/utils/platform/base.dart
++++ b/lib/src/core/utils/platform/base.dart
+@@ -14,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
+ enum Pfs {
+   android,
+   ios,
++  ohos,
+   linux,
+   macos,
+   windows,
+@@ -29,6 +30,10 @@ enum Pfs {
+     return switch (Platform.operatingSystem) {
+       'android' => android,
+       'ios' => ios,
++      // HarmonyOS NEXT. Not `linux`: `Platform.operatingSystem` answers
++      // `ohos` there even though the kernel is Linux, and treating it as
++      // Linux pulls in desktop paths that do not exist on the device.
++      'ohos' => ohos,
+       'linux' => linux,
+       'macos' => macos,
+       'windows' => windows,
+@@ -42,6 +47,7 @@ enum Pfs {
+   String toString() => switch (this) {
+     macos => 'macOS',
+     ios => 'iOS',
++    ohos => 'HarmonyOS',
+     final val => val.name.capitalize,
+   };
+ 
+@@ -179,9 +185,13 @@ enum Pfs {
+ 
+ final isAndroid = Pfs.type == Pfs.android;
+ final isIOS = Pfs.type == Pfs.ios;
++final isOhos = Pfs.type == Pfs.ohos;
+ final isLinux = Pfs.type == Pfs.linux;
+ final isMacOS = Pfs.type == Pfs.macos;
+ final isWindows = Pfs.type == Pfs.windows;
+ final isWeb = Pfs.type == Pfs.web;
+-final isMobile = Pfs.type == Pfs.ios || Pfs.type == Pfs.android;
++/// Phone and tablet, so HarmonyOS counts: the pages it opens, the plugins it
++/// may call and the layout it picks are the mobile ones, not the desktop ones.
++final isMobile =
++    Pfs.type == Pfs.ios || Pfs.type == Pfs.android || Pfs.type == Pfs.ohos;
+ final isDesktop = Pfs.type == Pfs.linux || Pfs.type == Pfs.macos || Pfs.type == Pfs.windows;

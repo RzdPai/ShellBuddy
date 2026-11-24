@@ -1,0 +1,170 @@
+name: ohos
+
+# Builds an unsigned HAP for HarmonyOS NEXT.
+#
+# Two things are not on GitHub's runners and have to be supplied:
+#
+#   1. The Flutter SDK. `oh-flutter/flutter_flutter` publishes tags such as
+#      `3.47.8-ohos-1.0.0`; `OHOS_FLUTTER_REF` picks one. It is cloned from
+#      AtomGit, which is reachable from Actions.
+#
+#   2. The OpenHarmony SDK (clang, sysroot, hvigor, hdc, ohpm). Huawei ships it
+#      inside DevEco Studio, behind a download page that requires an account,
+#      so there is no URL this workflow can be born knowing. Set a repository
+#      variable `OHOS_SDK_URL` to a tarball you host yourself — an Actions
+#      artifact, a release asset, any object store — laid out like DevEco's
+#      `sdk/` directory (`default/openharmony/native/...`). Without it the job
+#      stops with a message saying so rather than failing halfway through a
+#      build.
+#
+# What it produces: `build/ohos/hap/entry-default-unsigned.hap`. Unsigned means
+# an emulator can install it and a phone cannot — signing needs a certificate
+# tied to an AppGallery Connect account, which is a per-developer secret and
+# out of scope here.
+#
+# Known to be incomplete: see "Known gaps" in ohos/README.md. This job is the
+# harness, not a claim that the app runs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      flutter_ref:
+        description: "Flutter-ohos tag or branch"
+        required: false
+        default: "3.47.8-ohos-1.0.0"
+      build_mode:
+        description: "debug | profile | release"
+        required: false
+        default: "release"
+  push:
+    tags:
+      - "ohos-*"
+
+concurrency:
+  group: ohos-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_REF: ${{ github.event.inputs.flutter_ref || '3.47.8-ohos-1.0.0' }}
+  BUILD_MODE: ${{ github.event.inputs.build_mode || 'release' }}
+  # The app's own build script reads this to skip the Rust hook; without it the
+  # hook tries to resolve an `ohos` target and the toolchain throws.
+  SBM_TARGET_OHOS: "1"
+  # Mirrors. Harmless where they do not exist, and the difference between four
+  # minutes and forty on a good day.
+  PUB_HOSTED_URL: https://pub.flutter-io.cn
+  FLUTTER_STORAGE_BASE_URL: https://storage.flutter-io.cn
+
+jobs:
+  hap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Check OpenHarmony SDK is configured
+        run: |
+          if [ -z "${{ vars.OHOS_SDK_URL }}" ]; then
+            echo "::error::OHOS_SDK_URL is not set."
+            echo "Host a copy of DevEco Studio's sdk/ directory and point the"
+            echo "repository variable OHOS_SDK_URL at the tarball. It must unpack"
+            echo "to a directory containing default/openharmony/native/."
+            exit 1
+          fi
+
+      - name: Cache Flutter-ohos SDK
+        id: flutter-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/flutter-ohos
+            ~/.pub-cache
+          key: flutter-ohos-${{ env.FLUTTER_REF }}-${{ runner.os }}
+
+      - name: Install Flutter-ohos
+        if: steps.flutter-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          # AtomGit is the OpenHarmony mirror; the SDK is not on pub.dev or on
+          # flutter's own release channel.
+          git clone --depth 1 --branch "$FLUTTER_REF" \
+            https://atomgit.com/oh-flutter/flutter_flutter.git "$HOME/flutter-ohos"
+          "$HOME/flutter-ohos/bin/flutter" config --enable-ohos
+
+      - name: Install OpenHarmony SDK
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/ohos-sdk"
+          curl -fsSL "${{ vars.OHOS_SDK_URL }}" -o /tmp/ohos-sdk.tar.gz
+          tar xzf /tmp/ohos-sdk.tar.gz -C "$HOME/ohos-sdk" --strip-components=1
+          test -d "$HOME/ohos-sdk/default/openharmony/native/llvm" || {
+            echo "::error::the archive did not unpack to default/openharmony/native/llvm"
+            ls -la "$HOME/ohos-sdk"
+            exit 1
+          }
+          echo "DEVECO_SDK_HOME=$HOME/ohos-sdk" >> "$GITHUB_ENV"
+          echo "$HOME/ohos-sdk/default/openharmony/toolchains" >> "$GITHUB_PATH"
+          echo "$HOME/ohos-sdk/default/openharmony/native/llvm/bin" >> "$GITHUB_PATH"
+
+      - name: Install Node and ohpm
+        run: |
+          set -euo pipefail
+          # hvigor and ohpm are Node programs; DevEco bundles its own node, and
+          # these are the versions that bundle ships.
+          node --version || { sudo apt-get update && sudo apt-get install -y nodejs npm; }
+          if [ -d "$HOME/ohos-sdk/tools/ohpm" ]; then
+            echo "$HOME/ohos-sdk/tools/ohpm/bin" >> "$GITHUB_PATH"
+            echo "$HOME/ohos-sdk/tools/hvigor/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Rust toolchain
+        run: |
+          set -euo pipefail
+          rustup toolchain install nightly --component rust-src --profile minimal
+          rustup default stable
+          # Only to check the crate compiles for the host before the cross
+          # build; the target itself has no prebuilt std.
+          cargo --version
+
+      - name: Patch submodules for HarmonyOS
+        run: |
+          set -euo pipefail
+          # fl_lib's platform enum has no `ohos`, so `isMobile` answers false
+          # there and the app picks desktop branches. The patch is kept out of
+          # the submodule so `git submodule update` stays clean.
+          git -C packages/fl_lib apply --3way "$PWD/ohos/patches/0001-fl_lib-harmonyos-platform.patch"
+
+      - name: Build native libraries
+        run: |
+          set -euo pipefail
+          source ohos/tools/env.sh
+          ohos/tools/build-rust.sh
+          ohos/tools/build-sqlite3mc.sh
+          ohos/tools/build-fl-tty.sh
+          ls -la "$OHOS_LIBS_DIR"
+
+      - name: Resolve Dart dependencies
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/flutter-ohos/bin:$PATH"
+          flutter --version
+          flutter pub get
+
+      - name: Build HAP
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/flutter-ohos/bin:$PATH"
+          flutter build hap "--$BUILD_MODE" --no-codesign
+
+      - name: Upload HAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: serverbox-ohos-${{ env.BUILD_MODE }}
+          path: build/ohos/hap/*.hap
+          if-no-files-found: error
+          retention-days: 14

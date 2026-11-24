@@ -1,0 +1,54 @@
+
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/root/work/build_test/ohos/signing/RzdPai.cer",
+          "storePassword": "00000022bfd7c91c4f31ec3402a09045135938030e07176ebf54d3e3213e8cf9b88eae7c39c98a0f03ec73eefdb2f5755f91",
+          "keyAlias": "rzdpai",
+          "keyPassword": "00000022bfd7c91c4f31ec3402a09045135938030e07176ebf54d3e3213e8cf9b88eae7c39c98a0f03ec73eefdb2f5755f91",
+          "profile": "/root/work/build_test/ohos/signing/ShellBuddyRelease.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/root/work/build_test/ohos/signing/RzdPai.p12"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.1.0(18)",
+        "targetSdkVersion": "5.1.0(18)",
+        "runtimeOS": "HarmonyOS",
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "profile"
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

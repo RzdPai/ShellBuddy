@@ -1,0 +1,19 @@
+name: qr_scan_ohos
+description: >-
+  Minimal HarmonyOS (OHOS) system QR scanner bridge for ServerBox. Opens the
+  Scan Kit system scan UI and returns the raw barcode value.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+# The ArkTS half lives in the entry module at
+# ohos/entry/src/main/ets/plugins/QrScanOhosPlugin.ets and is registered by
+# hand in GeneratedPluginRegistrant. This OHOS toolchain does not regenerate
+# the registrant or the hvigor dependency map for newly added plugins, so a
+# separate HAR would never be compiled into the HAP.

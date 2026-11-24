@@ -1,0 +1,21 @@
+name: share_ohos
+description: >-
+  Minimal HarmonyOS (OHOS) system share bridge for ServerBox. Opens the system
+  share sheet via a sendData Want so local sandbox files can be handed to other
+  apps.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ohos:
+        package: com.example.share_ohos
+        pluginClass: ShareOhosPlugin
